@@ -35,6 +35,10 @@ COMPILATION:
 The default included Makefile is for Linux/gcc. The development files 
 in zlib-dev and libbz2-dev are needed to compile dmg2img, and those
 in openssl-dev are needed to compile vfdecrypt.
+Additionally, lzfse is required which must be built from source:
+    git clone https://github.com/lzfse/lzfse.git
+    cd lzfse
+    make && sudo make install
 
 
 CHANGELOG:

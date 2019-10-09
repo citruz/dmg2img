@@ -28,6 +28,7 @@ Options: -s (silent) -v (verbose) -V (extremely verbose) -d (debug)\n\
 #include <string.h>
 #include <assert.h>
 #include <inttypes.h>
+#include <lzfse.h>
 #include "dmg2img.h"
 #include "base64.h"
 #include "mntcmd.h"
@@ -412,6 +413,9 @@ int main(int argc, char *argv[])
 				case BT_BZLIB:
 					strcpy(sztype, "bzlib");
 					break;
+				case BT_LZFSE:
+					strcpy(sztype, "lzfse");
+					break;
 				case BT_ZERO:
 					strcpy(sztype, "zero");
 					break;
@@ -563,6 +567,42 @@ int main(int argc, char *argv[])
 					fwrite(dtmp, 1, bytes_written, FOUT);
 					to_read -= read_from_input;
 				}
+			} else if (block_type == BT_LZFSE) {
+				if (verbose >= 3)
+					printf("LZFSE decompress (in_addr=%llu in_size=%llu out_addr=%llu out_size=%llu)\n", (unsigned long long)in_offs, (unsigned long long)in_size, (unsigned long long)out_offs, (unsigned long long)out_size);
+				// lzfse does not support chunked decompression, therefore we need
+				// to allocate buffers to hold all in and output data at once
+				uint8_t *lz_in = malloc(in_size);
+				size_t lz_out_size = out_size + 1;
+				uint8_t *lz_out = malloc(lz_out_size);
+
+				if (!lz_in || !lz_out) {
+					mem_overflow();
+				}
+
+				fseeko(FIN, in_offs + add_offs, SEEK_SET);
+				to_write = fread(lz_in, 1, in_size, FIN);
+				if (ferror(FIN) || to_write != in_size) {
+					printf("ERROR: reading file %s\n", input_file);
+					free(lz_in);
+					free(lz_out);
+					return 1;
+				}
+				to_write = lzfse_decode_buffer(lz_out, lz_out_size, lz_in, in_size, NULL);
+				if (to_write  == lz_out_size) {
+					printf("ERROR: Decompression buffer too small\n");
+					free(lz_in);
+					free(lz_out);
+					return 1;
+				} else if (to_write == 0) {
+					printf("ERROR: LZFSE decompression failed\n");
+					free(lz_in);
+					free(lz_out);
+					return 1;
+				}
+				fwrite(lz_out, 1, to_write, FOUT);
+				free(lz_in);
+				free(lz_out);
 			} else if (block_type == BT_RAW) {
 				fseeko(FIN, in_offs + add_offs, SEEK_SET);
 				to_read = in_size;

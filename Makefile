@@ -5,7 +5,7 @@ BIN_DIR = ${DESTDIR}/usr/bin
 all: dmg2img vfdecrypt 
 
 dmg2img: dmg2img.c dmg2img.h mntcmd.h gpt.h dmg2img.o base64.o adc.o 
-	$(CC) -s -o dmg2img dmg2img.o base64.o adc.o -L. -lz -lbz2
+	$(CC) -s -o dmg2img dmg2img.o base64.o adc.o -L. -lz -lbz2 -llzfse
 
 dmg2img.o: dmg2img.c dmg2img.h
 	$(CC) $(CFLAGS) -c dmg2img.c
